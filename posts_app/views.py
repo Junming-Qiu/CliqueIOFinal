@@ -14,6 +14,10 @@ import datetime
 from authorize_main.models import Account
 from Notifications.models import NotificationModel
 from Notifications.views import Notifications
+from newsapi import NewsApiClient
+from chat.views import chat_key_seeder, create_private_chat, notify_chat, url_scrambler, list_all_people
+from django.db.models.functions import Trunc
+import urllib
 
 def getbookmarkinfo_allposts(request, post_id, page_number):
   return make_bookmark(request, post_id, page_number)
@@ -70,27 +74,106 @@ def PostApplyList(request): #for poster to see which users applied
     if application.account.id == request.user.id:
       users_applications.append(apply_list)
   
-  return render(request,'posts_app/Applied.html',{"users_applications":users_applications, 'all_notifications': Notifications(request)})
+  return render(request,'posts_app/Applied.html',{"users_applications":users_applications, 'all_notifications': Notifications(request), 'friends':list_all_people()})
 
-def PostList(request):
-  postlist =AllAppliedBookmarkedView(request)[0]
-  return render(request,'posts_app/home_template.html',{"pag_allposts":postlist, 'all_notifications': Notifications(request)})
+def PostList(request, searched=False, results=None, title='', sorted_option=''):
+  
+  if searched == False:
+    postlist = AllAppliedBookmarkedView(request)[0]
+  elif searched == True:
+    
+    paginator_allposts = Paginator(results, 3)
+    allposts_number = request.GET.get('page1',1)
+    postlist = paginator_allposts.get_page(allposts_number)
+    
+  newsapi = NewsApiClient(api_key='2d6d2823f99f42aaa163e76c3dbb20fa')
+  top_headlines = newsapi.get_top_headlines(language='en',sources='techcrunch')
+  all_articles = top_headlines['articles']
 
-def ApplyList(request): #for user to see which posts they applied to
-  appliedposts_obj = AllAppliedBookmarkedView(request)[1]
-  return render(request, 'posts_app/Applied.html', {'pag_appliedposts': appliedposts_obj, 'all_notifications': Notifications(request)})
+  for article in all_articles:
+    clock = article['publishedAt']
+    date = clock[0:10]
+    year = date[0:4]
+    month = date[5:7]
+    day = date[8:10]
 
-def BookmarkList(request):
-  bookmarks_obj = AllAppliedBookmarkedView(request)[2]
-  return render(request,'posts_app/Bookmarked.html',{"pag_bookmarks":bookmarks_obj, 'all_notifications': Notifications(request)})
+    rearranged = month+'-'+day+'-'+year
+    
+    time = clock[11:int(len(clock)-4)]
+    hours = time[0:2]
+    minutes = time[3:5]
+    am_or_pm=''
+    if(int(hours) >= 12):
+      am_or_pm = 'PM'
+      hours = str(int(hours)-12)
+    else:
+      am_or_pm ='AM'
+    
+    article['publishedAt'] = rearranged+" "+ hours+":"+minutes+" "+am_or_pm
+    
+    
+    # print(type(time))
+    # print(time[0:10])
+    # print(time[11:len(time)-1])
+    # article['publishedAt'] = time[0:10]+" "+time[11:len(time)-1]
+    # time = time[0,10] +" "+time[11,int(len(time))]
+  
+  return render(request,'posts_app/home_template.html',{"pag_allposts":postlist, 'all_notifications': Notifications(request),"all_articles":all_articles, 'friends':list_all_people(), 'title': title, 'sorted_option':sorted_option})
 
-def MyPostList(request, post_id=None,page_number=1):
-  mypost_obj = AllAppliedBookmarkedView(request,page_number)[3]
-  #mypost_obj.number = page_number
-  # print(page_number, mypost_obj.number, mypost_obj.paginator.num_pages)
+def ApplyList(request, searched=False, results=None, title='', sorted_option=''): #for user to see which posts they applied to
+  if searched == False:
+    appliedposts_obj = AllAppliedBookmarkedView(request)[1]
+    applied_posts_urls = AllAppliedBookmarkedView(request)[4]
+  elif searched == True:
+    
+    paginator_allposts = Paginator(results, 3)
+    allposts_number = request.GET.get('page2',1) 
+    appliedposts_obj = paginator_allposts.get_page(allposts_number)
+    urls = []
+    for application in results:
+      poster_id = application.applied_post.post_made_by.id
+      post_id = application.applied_post.id
+      if application.accepted:
+        url =  url_scrambler(poster_id) + url_scrambler(post_id) + url_scrambler(request.user.id)
+        
+        urls.append(url)
+      else:
+        urls.append(0)
+    applied_posts_urls = zip(appliedposts_obj, urls)
+  return render(request, 'posts_app/Applied.html', {'pag_appliedposts': appliedposts_obj, 'applied_posts_urls': applied_posts_urls, 'all_notifications': Notifications(request), 'friends':list_all_people(), 'title': title, 'sorted_option':sorted_option})
+
+def BookmarkList(request, searched=False, results=None, title='', sorted_option=''):
+  if searched == False:
+    
+    bookmarks_obj = AllAppliedBookmarkedView(request)[2] 
+  elif searched == True:
+    
+    paginator_bookmarks = Paginator(results, 3)
+    bookmarks_number = request.GET.get('page3')
+    bookmarks_obj = paginator_bookmarks.get_page(bookmarks_number)
+
+  return render(request,'posts_app/Bookmarked.html',{"pag_bookmarks":bookmarks_obj, 'all_notifications': Notifications(request), 'friends':list_all_people(),'title': title, 'sorted_option':sorted_option})  
+
+    
+def MyPostList(request, post_id=None,page_number=1, searched=False, results=None, title='', sorted_option=''):
+  
+  if searched == False:
+    mypost_obj = AllAppliedBookmarkedView(request,page_number)[3]
+    #mypost_obj.number = page_number
+    # print(page_number, mypost_obj.number, mypost_obj.paginator.num_pages)
+    
+      
+  else:
+    paginator_mypost = Paginator(results, 3)
+    mypost_number = request.GET.get('page4',page_number)
+    mypost_obj = paginator_mypost.get_page(mypost_number)
+    
+    
   current_post = ''
   users = []
   accepted = []
+  chat_url = []
+  
   if post_id:
     post = PostModel.objects.get(id=post_id)
     applicants = post.applicants
@@ -101,23 +184,35 @@ def MyPostList(request, post_id=None,page_number=1):
     
     for x in post.applicants:
       users.append(Account.objects.get(id=x))
-    print(accepted)
+    #print(accepted)
 
+    
+    for x in range(len(accepted)):
+      
+      #print(request.user.id)
+      #print(accepted[x].id) 
+      url = url_scrambler(request.user.id) + url_scrambler(post_id) + url_scrambler(accepted[x].id)
+      create_private_chat(request, url, accepted[x].id)
+      chat_url.append(url)
+      
+    user_url_combined = zip(accepted, chat_url)
+    
   else:
+    user_url_combined = []
     applicants = []
-
+  
   return render(request, 'posts_app/My_Post.html', {"pag_mypost":mypost_obj, 'users': users,"current_post":current_post,
-  "num":len(users),"post_id":post_id,"accepted":accepted,"num_accepted":len(accepted), 'all_notifications': Notifications(request)})
+  "num":len(users),"post_id":post_id,"accepted":accepted,"num_accepted":len(accepted), 'all_notifications': Notifications(request),
+  'user_url_combined': user_url_combined, 'friends':list_all_people(), 'title': title, 'sorted_option': sorted_option})
   
 def AllAppliedBookmarkedView(request,page_number=None):
-  all_posts = PostModel.objects.all()
-  
+  all_posts = PostModel.objects.all().order_by('id')
   all_posts_filtered = []
   user_posts = []
   user_bookmarks = []
-  applied_posts = []
-  all_bookmarks = BookmarkedModel.objects.all()
-  all_apps = AppliedPostsModel.objects.all()
+
+  all_bookmarks = BookmarkedModel.objects.all().order_by('id') 
+  applied_posts = AppliedPostsModel.objects.filter(account__id=request.user.id).order_by('id') 
   
   for book_mark in all_bookmarks:
     if book_mark.account.id == request.user.id:
@@ -154,17 +249,27 @@ def AllAppliedBookmarkedView(request,page_number=None):
     else:
       if post.application_deadline > datetime.date.today() and post.current_num_of_accepted_applicants < post.num_of_positions:
         all_posts_filtered.append(post)
+       
+  urls = []
+  for application in applied_posts:
+    if application.accepted == True:
+      poster_id = application.applied_post.post_made_by.id
+      post_id = application.applied_post.id
+      url =  url_scrambler(poster_id) + url_scrambler(post_id) + url_scrambler(request.user.id)
+      urls.append(url)
+
+    else:
+      urls.append(0)
   
-  for app_post in all_apps:
-    if app_post.account.id == request.user.id:
-      applied_posts.append(app_post)
+  applied_posts_urls = zip(applied_posts, urls)
+      
   #print(applied_posts)
   paginator_allposts = Paginator(all_posts_filtered, 3)
   allposts_number = request.GET.get('page1',)
   allposts_obj = paginator_allposts.get_page(allposts_number)
   
   paginator_applied = Paginator(applied_posts, 3)
-  app_posts_number = request.GET.get('page2')
+  app_posts_number = request.GET.get('page2',)
   appliedposts_obj = paginator_applied.get_page(app_posts_number)
   
   paginator_bookmarks = Paginator(user_bookmarks, 3)
@@ -175,8 +280,7 @@ def AllAppliedBookmarkedView(request,page_number=None):
   mypost_number = request.GET.get('page4',page_number)
   mypost_obj = paginator_mypost.get_page(mypost_number)
   
-  
-  return [allposts_obj, appliedposts_obj, bookmarks_obj, mypost_obj]
+  return [allposts_obj, appliedposts_obj, bookmarks_obj, mypost_obj, applied_posts_urls]
   
   #return render(request,'posts_app/home_template.html',
                 #{'pag_allposts': allposts_obj, 'pag_bookmarks': bookmarks_obj,"pag_mypost":mypost_obj})
@@ -186,6 +290,16 @@ def create_post_view(request):
   if request.method == 'POST':
     form =PostForm(request.POST)
     if form.is_valid():
+      print("responses----->", request.POST)
+      for part in request.POST: 
+        print(part)
+        print(request.POST[part])
+      print('...........................')
+      
+      for value in request.POST.values():
+        print(value)
+      print("printing questions:")
+      print("questions----->", request.POST.getlist('questions'), type(request.POST['questions']))
       title = request.POST['title_of_post']
       title = title.replace('\'','`')
       description = request.POST['description_of_post']
@@ -202,7 +316,7 @@ def create_post_view(request):
       messages.warning(request,'Invalid post')
       return redirect('mypostlist')
   form = PostForm()
-  return render(request,'posts_app/post_page.html',{"form":form, 'all_notifications': Notifications(request)}) 
+  return render(request,'posts_app/post_page.html',{"form":form, 'all_notifications': Notifications(request), 'friends':list_all_people()}) 
 
 def make_bookmark(request, post_id, page_number):
   try:
@@ -229,7 +343,7 @@ def delete_my_bookmark(request, bookmark_id, page_number=1):
   return redirect(f'/posts/bookmarked_posts/?page3={page_number}')
 
 def delete_my_post(request, post_id, page_number):
-  print(page_number)
+  
   my_post = PostModel.objects.get(id=post_id)
   my_post.delete()
   messages.success(request,'Post Deleted')
@@ -256,6 +370,9 @@ def applicant_profile(request, user_id):
   applicant = Account.objects.get(id=user_id)
   applicant_first_name = applicant.first_name
   settings = applicant.show_to_public
+  is_friend = False
+  if user_id in Account.objects.get(id = request.user.id).friends:
+    is_friend = True
   if settings[0] == True and applicant.profile_pic != 'None':
     profile_pic = applicant.profile_pic.url
     print(applicant.profile_pic)
@@ -267,7 +384,7 @@ def applicant_profile(request, user_id):
     email = 'Not Visible To Public. Please Contact Through Chat.'
   #print(settings)
   #[profile_pic, email, first_name, last_name, university, major, school_year, date_joined]
-  return render(request, 'posts_app/pub_profile.html', {'applicant':applicant, 'profile_pic': profile_pic, 'email': email, 'all_notifications': Notifications(request)})
+  return render(request, 'posts_app/pub_profile.html', {'applicant':applicant, 'profile_pic': profile_pic, 'email': email, 'all_notifications': Notifications(request), 'friends':list_all_people(), 'is_friend': is_friend})
 
 
 def accept_applicant(request, page_num=1):
@@ -306,4 +423,523 @@ def accept_applicant(request, page_num=1):
   messages.warning(request, 'Failed to accept applicants')
   return redirect(f'/posts/my_posts/{post_id}/{page_num}/?page4={page_num}')
   #return HttpResponse('Failure')
+
+
+
+def filter_keyword_all(request):
+  #obtain pagination info
+  pre_url = request.build_absolute_uri().strip().split('&')
+  print('pre_url------->', pre_url)
+  
+  #post request
+  if len(pre_url) == 1:
+    sorted_option = ''
+    #keyword search
+    title = request.POST.get('search')
+    #interest search
+    interest_lst = []
+    
+    interest_lst.append(request.POST.get('interestHealth'))
+    interest_lst.append(request.POST.get('interestBusiness'))
+    interest_lst.append(request.POST.get('interestArt'))
+    interest_lst.append(request.POST.get('interestSoftware'))
+    interest_lst.append(request.POST.get('interestData'))
+    interest_lst.append(request.POST.get('interestWeb'))
+    interest_text = (request.POST.get('moreInterests'))
+    
+    if interest_text is not None:
+      interest_text = interest_text.strip().split(',')
+      for word1 in interest_text:
+        word = word1.strip()
+        for word2 in word.split(' '):
+          interest_lst.append(word2)
+  
+    #print('interest_lst------- ->', interest_lst)
+    
+    #sorted list
+    sorted_lst = []
+    
+    sorted_lst.append(request.POST.get('upcomingDeadlines'))
+    sorted_lst.append(request.POST.get(('mostRecent')))
+    
+    #print('sorted_list ---->', sorted_lst)
+    
+    #university = request.POST.get('university')
+    
+    #print('university ---->', university)
+    
+  else:
+    sorted_option = pre_url[-1]
+    sorted_lst = [pre_url[-1]]
+    pre_url = pre_url[-2]
+    title = pre_url
+    interest_lst = []
+    
+  
+  #print('sorted_option: >>>>>>>>>>>>>>', sorted_option, sorted_lst)
+  #print('title: >>>>>>>>>>>>>>>>', title)
+  relevant_lst = []
+  filtered_list = []
+  
+  for interest in interest_lst:
+    if interest != None:
+      title = title + ',' + interest
+  
+  #if university is not '':
+    #title = title + ',' + university
+  
+  if title is not None or title == '':
+    
+    keywords = title.strip().split(' ')
+    for part in range(len(keywords)):
+      filtered_list.extend(keywords[part].split(','))
+
+    for ind in range(len(title)):
+      if title[ind].isalnum() is not True:
+        title = title.replace(title[ind], ',')
         
+    print('title.>>>>>>>3', title)
+    if title[-1] == ",":
+      title = title[:-1]
+    #print(title)
+    
+    if filtered_list[0] == '':
+      filtered_list.pop(0)
+    
+    if filtered_list[-1] == "":
+      filtered_list.pop()
+    
+    #print('filtered_lst-------->', filtered_list)
+    
+    #user_posts = PostModel.objects.filter(post_made_by__id=request.user.id)
+    
+    all_posts = PostModel.objects.all().order_by('id') 
+    
+    #search by filter
+    for filter_option in sorted_lst:
+      if filter_option is not None:
+        if filter_option == 'upcomingDeadlines':
+          sorted_option = 'upcomingDeadlines'
+          all_posts = PostModel.objects.all().order_by('application_deadline').reverse()
+          
+        elif filter_option == 'mostRecent':
+          sorted_option = 'date_created'
+          all_posts = PostModel.objects.all().order_by('date_created').reverse()
+      
+
+    #search by keyword
+    for word in filtered_list:
+      word = word.strip()
+      
+      for post in all_posts:
+        if post.post_made_by.id is not request.user.id and not post.application_completed:
+        
+          if word.lower() in post.title_of_post.lower():
+            if post not in relevant_lst:
+              relevant_lst.append(post)
+          
+          if word.lower() in post.description_of_post.lower():
+            if post not in relevant_lst:
+              relevant_lst.append(post)
+          
+          if word.lower() in post.skills_needed.lower():
+            if post not in relevant_lst:
+              relevant_lst.append(post)
+          
+          for genre in post.genres:
+            if word.lower() == genre.lower():
+              if post not in relevant_lst:
+                relevant_lst.append(post)
+              break
+  
+  #print(relevant_lst)
+  if len(relevant_lst) == 0:
+    messages.success(request,'No Post Relating to this Keyword')
+    return redirect('hometemplate')
+  return PostList(request, True, relevant_lst, title, sorted_option)
+
+
+
+def filter_keyword_applied(request):
+  #obtain pagination info
+  pre_url = request.build_absolute_uri().strip().split('&')
+  
+  
+  #post request
+  if len(pre_url) == 1:
+    sorted_option = ''
+    #keyword search
+    title = request.POST.get('search')
+    
+    #interest search
+    interest_lst = []
+    
+    interest_lst.append(request.POST.get('interestHealth'))
+    interest_lst.append(request.POST.get('interestBusiness'))
+    interest_lst.append(request.POST.get('interestArt'))
+    interest_lst.append(request.POST.get('interestSoftware'))
+    interest_lst.append(request.POST.get('interestData'))
+    interest_lst.append(request.POST.get('interestWeb'))
+    interest_text = (request.POST.get('moreInterests'))
+    
+    if interest_text is not None:
+      interest_text = interest_text.strip().split(',')
+      for word1 in interest_text:
+        word = word1.strip()
+        for word2 in word.split(' '):
+          interest_lst.append(word2)
+  
+    #print('interest_lst------- ->', interest_lst)
+    
+    #sorted list
+    sorted_lst = []
+    
+    sorted_lst.append(request.POST.get('upcomingDeadlines'))
+    sorted_lst.append(request.POST.get(('mostRecent')))
+    
+    #print('sorted_list ---->', sorted_lst)
+    
+    #university = request.POST.get('university')
+    
+    #print('university ---->', university)
+    
+  else:
+    sorted_option = pre_url[-1]
+    sorted_lst = [pre_url[-1]]
+    pre_url = pre_url[-2]
+    title = pre_url
+    interest_lst = []
+    
+
+  relevant_lst = []
+  filtered_list = []
+  
+  for interest in interest_lst:
+    if interest != None:
+      title = title + ',' + interest
+  
+  #if university is not '':
+    #title = title + ',' + university
+  
+  if title is not None or title == '':
+    
+    keywords = title.strip().split(' ')
+    for part in range(len(keywords)):
+      filtered_list.extend(keywords[part].split(','))
+
+    for ind in range(len(title)):
+      if title[ind].isalnum() is not True:
+        title = title.replace(title[ind], ',')
+        
+    #print(title)
+    
+    if filtered_list[0] == '':
+      filtered_list.pop(0)
+    
+    if filtered_list[-1] == "":
+      filtered_list.pop()
+    
+    #print('filtered_lst-------->', filtered_list)
+    
+    #user_posts = PostModel.objects.filter(post_made_by__id=request.user.id)
+    
+    all_posts = AppliedPostsModel.objects.filter(account__id=request.user.id).order_by('id') 
+    
+    #search by filter
+    for filter_option in sorted_lst:
+      if filter_option is not None:
+        if filter_option == 'upcomingDeadlines':
+          sorted_option = 'upcomingDeadlines'
+          all_posts = AppliedPostsModel.objects.filter(account__id=request.user.id).order_by('applied_post__application_deadline').reverse()
+        elif filter_option == 'mostRecent':
+          sorted_option = 'date_created'
+          all_posts = AppliedPostsModel.objects.filter(account__id=request.user.id).order_by('applied_post__date_created').reverse()
+          
+
+    #search by keyword
+    for word in filtered_list:
+      word = word.strip()
+      
+      for post in all_posts:
+        
+        if post.applied_post.post_made_by.id is not request.user.id:
+          
+          if word.lower() in post.applied_post.title_of_post.lower():
+            if post not in relevant_lst:
+              relevant_lst.append(post)
+          
+          if word.lower() in post.applied_post.description_of_post.lower():
+            if post not in relevant_lst:
+              relevant_lst.append(post)
+          
+          if word.lower() in post.applied_post.skills_needed.lower():
+            if post not in relevant_lst:
+              relevant_lst.append(post)
+          
+          for genre in post.applied_post.genres:
+            if word.lower() == genre.lower():
+              if post not in relevant_lst:
+                relevant_lst.append(post)
+              break
+  #print(relevant_lst)
+  if len(relevant_lst) == 0:
+    messages.success(request,'No Post Relating to this Keyword')
+    return redirect('applylist')
+    #return PostList(request)
+  return ApplyList(request, True, relevant_lst, title, sorted_option)
+
+
+def filter_keyword_bookmarked(request):
+  #obtain pagination info
+  pre_url = request.build_absolute_uri().strip().split('&')
+  
+  
+  #post request
+  if len(pre_url) == 1:
+    sorted_option = ''
+    #keyword search
+    title = request.POST.get('search')
+    
+    #interest search
+    interest_lst = []
+    
+    interest_lst.append(request.POST.get('interestHealth'))
+    interest_lst.append(request.POST.get('interestBusiness'))
+    interest_lst.append(request.POST.get('interestArt'))
+    interest_lst.append(request.POST.get('interestSoftware'))
+    interest_lst.append(request.POST.get('interestData'))
+    interest_lst.append(request.POST.get('interestWeb'))
+    interest_text = (request.POST.get('moreInterests'))
+    
+    if interest_text is not None:
+      interest_text = interest_text.strip().split(',')
+      for word1 in interest_text:
+        word = word1.strip()
+        for word2 in word.split(' '):
+          interest_lst.append(word2)
+  
+    #print('interest_lst------- ->', interest_lst)
+    
+    #sorted list
+    sorted_lst = []
+    
+    sorted_lst.append(request.POST.get('upcomingDeadlines'))
+    sorted_lst.append(request.POST.get(('mostRecent')))
+    
+    #print('sorted_list ---->', sorted_lst)
+    
+    #university = request.POST.get('university')
+    
+    #print('university ---->', university)
+    
+  else:
+    sorted_option = pre_url[-1]
+    sorted_lst = [pre_url[-1]]
+    pre_url = pre_url[-2]
+    title = pre_url
+    interest_lst = []
+    
+  
+
+  relevant_lst = []
+  filtered_list = []
+  
+  for interest in interest_lst:
+    if interest != None:
+      title = title + ',' + interest
+  
+  #if university is not '':
+    #title = title + ',' + university
+  
+  if title is not None or title == '':
+    
+    keywords = title.strip().split(' ')
+    for part in range(len(keywords)):
+      filtered_list.extend(keywords[part].split(','))
+
+    for ind in range(len(title)):
+      if title[ind].isalnum() is not True:
+        title = title.replace(title[ind], ',')
+        
+    #print(title)
+    
+    if filtered_list[0] == '':
+      filtered_list.pop(0)
+    if filtered_list[-1] == "":
+      filtered_list.pop()
+    
+    #print('filtered_lst-------->', filtered_list)
+    
+    #user_posts = PostModel.objects.filter(post_made_by__id=request.user.id)
+    
+
+    all_posts = BookmarkedModel.objects.filter(account__id=request.user.id).order_by('id') 
+    
+    #search by filter
+    for filter_option in sorted_lst:
+      if filter_option is not None:
+        if filter_option == 'upcomingDeadlines':
+          sorted_option = 'upcomingDeadlines'
+          all_posts = BookmarkedModel.objects.filter(account__id=request.user.id).order_by('bookmarked_post__application_deadline').reverse()
+        
+        elif filter_option == 'mostRecent':
+          sorted_option = 'date_created'
+          all_posts = BookmarkedModel.objects.filter(account__id=request.user.id).order_by('bookmarked_post__date_created').reverse()
+      
+
+    #search by keyword
+    for word in filtered_list:
+      word = word.strip()
+      
+      for post in all_posts:
+        
+        if word.lower() in post.bookmarked_post.title_of_post.lower():
+          if post not in relevant_lst:
+            relevant_lst.append(post)
+        
+        if word.lower() in post.bookmarked_post.description_of_post.lower():
+          if post not in relevant_lst:
+            relevant_lst.append(post)
+        
+        if word.lower() in post.bookmarked_post.skills_needed.lower():
+          if post not in relevant_lst:
+            relevant_lst.append(post)
+        
+        for genre in post.bookmarked_post.genres:
+          if word.lower() == genre.lower():
+            if post not in relevant_lst:
+              relevant_lst.append(post)
+            break
+
+  if len(relevant_lst) == 0:
+    messages.success(request,'No Post Relating to this Keyword')
+    return redirect('bookmarklist')
+    #return PostList(request)
+  return BookmarkList(request, True, relevant_lst, title, sorted_option)
+
+
+def filter_keyword_mypost(request):
+  #obtain pagination info
+  pre_url = request.build_absolute_uri().strip().split('&')
+  
+  #post request
+  if len(pre_url) == 1:
+    sorted_option = ''
+    #keyword search
+    title = request.POST.get('search')
+    
+    #interest search
+    interest_lst = []
+    
+    interest_lst.append(request.POST.get('interestHealth'))
+    interest_lst.append(request.POST.get('interestBusiness'))
+    interest_lst.append(request.POST.get('interestArt'))
+    interest_lst.append(request.POST.get('interestSoftware'))
+    interest_lst.append(request.POST.get('interestData'))
+    interest_lst.append(request.POST.get('interestWeb'))
+    interest_text = (request.POST.get('moreInterests'))
+    
+    if interest_text is not None:
+      interest_text = interest_text.strip().split(',')
+      for word1 in interest_text:
+        word = word1.strip()
+        for word2 in word.split(' '):
+          interest_lst.append(word2)
+  
+    #print('interest_lst------- ->', interest_lst)
+    
+    #sorted list
+    sorted_lst = []
+    
+    sorted_lst.append(request.POST.get('upcomingDeadlines'))
+    sorted_lst.append(request.POST.get(('mostRecent')))
+    
+    #print('sorted_list ---->', sorted_lst)
+    
+    #university = request.POST.get('university')
+    
+    #print('university ---->', university)
+    
+  else:
+    sorted_option = pre_url[-1]
+    sorted_lst = [pre_url[-1]]
+    pre_url = pre_url[-2]
+    title = pre_url
+    interest_lst = []
+  
+  relevant_lst = []
+  filtered_list = []
+  
+  for interest in interest_lst:
+    if interest != None:
+      title = title + ',' + interest
+  
+  #if university is not '':
+    #title = title + ',' + university
+  
+  if title is not None or title == '':
+    
+    keywords = title.strip().split(' ')
+    for part in range(len(keywords)):
+      filtered_list.extend(keywords[part].split(','))
+
+    for ind in range(len(title)):
+      if title[ind].isalnum() is not True:
+        title = title.replace(title[ind], ',')
+        
+    #print(title)
+    
+    if filtered_list[0] == '':
+      filtered_list.pop(0)
+    if filtered_list[-1] == "":
+      filtered_list.pop()
+    
+    #print('filtered_lst-------->', filtered_list)
+    
+    #user_posts = PostModel.objects.filter(post_made_by__id=request.user.id)
+    
+
+    all_posts = PostModel.objects.filter(post_made_by__id=request.user.id).order_by('id') 
+    
+    #search by filter
+    for filter_option in sorted_lst:
+      if filter_option is not None:
+        if filter_option == 'upcomingDeadlines':
+          sorted_option = 'upcomingDeadlines'
+          all_posts = PostModel.objects.filter(post_made_by__id=request.user.id).order_by('application_deadline').reverse()
+          
+        elif filter_option == 'mostRecent':
+          sorted_option = 'date_created'
+          all_posts = PostModel.objects.filter(post_made_by__id=request.user.id).order_by('date_created').reverse()
+          
+  
+    #search by keyword
+    for word in filtered_list:
+      word = word.strip()
+      
+      for post in all_posts:
+        
+        if word.lower() in post.title_of_post.lower():
+          if post not in relevant_lst:
+            relevant_lst.append(post)
+        
+        if word.lower() in post.description_of_post.lower():
+          if post not in relevant_lst:
+            relevant_lst.append(post)
+        
+        if word.lower() in post.skills_needed.lower():
+          if post not in relevant_lst:
+            relevant_lst.append(post)
+        
+        for genre in post.genres:
+          if word.lower() == genre.lower():
+            if post not in relevant_lst:
+              relevant_lst.append(post)
+            break
+
+  #print(relevant_lst)
+  if len(relevant_lst) == 0:
+    messages.success(request,'No Post Relating to this Keyword')
+    return redirect('mypostlist')
+    #return PostList(request)
+  return MyPostList(request, None, 1, True, relevant_lst, title, sorted_option)

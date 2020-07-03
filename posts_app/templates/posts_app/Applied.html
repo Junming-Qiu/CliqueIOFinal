@@ -1,10 +1,10 @@
 {%extends 'authorize_main/base.html'%}
 {%load static%}
-
+{%load tz%}
 {%block content%}
 {% if messages %}
 {% for message in messages %}
-<div style = "background-color: #1B9AAA;position:relative;top:75px; z-index:99999;"class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}" role="alert">{{ message }}</div>
+<div style = "background-color: #1B9AAA;position:relative;top:55px; z-index:99999;"class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}" role="alert">{{ message }}</div>
 {% endfor %}
 {% endif %}
 <div class = "box">
@@ -38,21 +38,21 @@
 
 <!-- List of APPLIED projects -->
 <div class="gallery applied">
-	{%for application in pag_appliedposts%}
+	{%for application, url in applied_posts_urls%}
 	<div class = "projectSec" id="clickPost"
 			onclick="openProject('{{application.applied_post.title_of_post}}','{{application.applied_post.num_of_positions}}','{{application.applied_post.skills_needed}}','lolol','{{application.applied_post.description_of_post}}');">
 			<div id="project"  class="project">
 				{%if application.applied_post.post_made_by.profile_pic == 'None'%}
-				<img src = '/media/media/default_profile.png' alt = "">
+				<img class="projectProfImage" src = '/media/media/default_profile.png' alt = "">
 				{%else%}
-				<img src={{application.applied_post.post_made_by.profile_pic.url}} alt="">
+				<img class="projectProfImage" src={{application.applied_post.post_made_by.profile_pic.url}} alt="">
 				{%endif%}
-				<h4 style="color: rgb(27, 14, 211);" id = "date_created" class='date_posted'>Date Posted: {{application.applied_post.date_created}}</h4>
+				<h4 style="color: rgb(27, 14, 211);" id = "date_created" class='date_posted'>Date Posted: {{application.applied_post.date_created|timezone:'America/New_York'}}</h4>
 				<h4 style="color: rgb(146, 23, 136);">Application Deadline: {{application.applied_post.application_deadline}}</h4>
 				<a onclick = "notBubbleUp(event);" href="{% url 'applicant_profile' application.applied_post.post_made_by.id %}" style="color: rgb(32, 104, 10);"><h4>Posted By: {{application.applied_post.post_made_by.first_name}} {{application.applied_post.post_made_by.last_name}}</h4></a>
 				
 				<h1 id="projname" class="projname" style="font-size:15px;">Start Up Idea: {{application.applied_post.title_of_post}} </h1>
-				Number of Positions: {{application.applied_post.num_of_positions}}
+				Number of Open Positions: X/{{application.applied_post.num_of_positions}}
 
 				<h1 id="projdesc" class="projdesc" style="font-size:15px;"> Description: {{application.applied_post.description_of_post}}</h1>
 				
@@ -61,6 +61,7 @@
 				{% endif %}
 				{%if application.accepted == True%}
 					<h1 style = "color:rgb(255, 0, 0);" >Status: Accepted</h1>
+					<a onclick = "notBubbleUp(event);" href="{%url 'room' url%}" style="color: rgb(0, 0, 0);"><h4>Start Chatting!</h4></a>
 				{%else%}
 					<h1 style ="color:rgb(255, 0, 0);">Status: Pending</h1>
 				{%endif%}
@@ -75,8 +76,8 @@
 <div class="pagination"  type='pagination'>
 	<span class="step-links">
 		{% if pag_appliedposts.has_previous %}
-			<a href="?page2=1">&laquo; first</a>
-			<a href="?page2={{ pag_appliedposts.previous_page_number }}">previous</a>
+			<a href="?page2=1&{{title}}&{{sorted_option}}">&laquo; first</a>
+			<a href="?page2={{ pag_appliedposts.previous_page_number }}&{{title}}&{{sorted_option}}">previous</a>
 		{% endif %}
 
 		<span class="current">
@@ -84,8 +85,8 @@
 		</span>
 
 		{% if pag_appliedposts.has_next %}
-			<a href="?page2={{ pag_appliedposts.next_page_number }}">next</a>
-			<a href="?page2={{ pag_appliedposts.paginator.num_pages }}">last &raquo;</a>
+			<a href="?page2={{ pag_appliedposts.next_page_number }}&{{title}}&{{sorted_option}}">next</a>
+			<a href="?page2={{ pag_appliedposts.paginator.num_pages }}&{{title}}&{{sorted_option}}">last &raquo;</a>
 		{% endif %}
 	</span>
 </div>	
@@ -99,51 +100,74 @@
 
 <div class="filter">
 	<h1 style="margin-top: 15px;margin-left: 40%; font-size: 150%; font-weight:bold; color: white; ">Filter</h1>
-	<hr style="height: 100px; border-color: white;">
-
-		<a onclick="clear();" href="javascript:;" class="hvr-underline-reveal">Clear All</a>
-		<ul style="width: 200px; ">
-			<li class="filteritem"><button class="interest filter_options">Interests</button>
+	<hr style="height: 20px; border-color: white;">
+		<form name='filter_form' id = "filter_form" method="post" action="{%url 'submit_filter_applied' %}">
+		{% csrf_token%}
+		<input type="search" id='search' name="search" class="searchBar" placeholder="Search By Keyword">
+		<!--<button type ="submit">Submit</button>-->
+		<button onclick="saveFilters();"style="background:transparent;border:none;"action='submit'><i id="fa-search"class="fa fa-search" aria-hidden="true"></i></button>
+		<br>
+		<br>
+		<a id="clear" onclick="clearAll();" href="javascript:;" class="hvr-underline-reveal">Clear All</a>
+		<ul style="width: 200px;">
+			<li class="filteritem"><a onclick="openInterestFilter();" class="interest filter_options">Interests</a>
 				<div id="interest" class="hide-section bar">
-					<label class="interestTypes" for="vehicle1">Computer Science
-						<input class="boxes" type="checkbox" id="vehicle1" name="" value="Bike">
+					<label class="interestTypes" for="interestHealth">Health
+						<input class="boxes" type="checkbox" id="interest" name="interestHealth" value="Health">
 					</label><br>
 
-					<label class="interestTypes" for="vehicle2"> Business
-						<input class="boxes" type="checkbox" id="vehicle2" name="vehicle2" value="Car">
+					<label class="interestTypes" for="interestBusiness"> Business
+						<input class="boxes" type="checkbox" id="interest" name="interestBusiness" value="Business">
 					</label><br>
 
-					<label class="interestTypes" for="vehicle1">Math
-						<input class="boxes" type="checkbox" id="vehicle1" name="vehicle1" value="Bike">
+					<label class="interestTypes" for="interestArt">Art
+						<input class="boxes" type="checkbox" id="interest" name="interestArt" value="Art">
 					</label><br>
-				</div>
+
+					<label class="interestTypes" for="interestSoftware">Software
+						<input class="boxes" type="checkbox" id="interest" name="interestSoftware" value="Software">
+					</label><br>
+
+					<label class="interestTypes" for="interestData">Data Analytics
+						<input class="boxes" type="checkbox" id="interest" name="interestData" value="Data Analytics">
+					</label><br>
+
+					<label class="interestTypes" for="interestWeb">Web App Development
+						<input class="boxes" type="checkbox" id="interest" name="interestWeb" value="Web App Development">
+					</label><br>
+				
+					<input id="moreInterests" name="moreInterests" class="interestText" type="moreInterests" placeholder="Economics, Business, etc">
+					<br>
+				</div> 
+				
 			</li>
+			<script>
+			function selectSortBy(input) {
+  				var boxes=document.querySelectorAll('#sortBy');
+  				for(var i=0;i<boxes.length;i++){
+   				 boxes[i].checked=false;
+  				}
+  				input.checked=true;
+			}
+			</script>
 			<hr style="width: 200px;">
-			<li class="filteritem"><button class="location1 filter_options">Location</button>
-				<div id="location1" class="hide-section bar">
-
-					<label class="interestTypes" for="vehicle2">Albany
-						<input class="boxes" type="checkbox" id="vehicle2" name="vehicle2" value="Car">
-					</label><br>
-
-					<label class="interestTypes" for="vehicle1">Buffalo
-						<input class="boxes" type="checkbox" id="vehicle1" name="vehicle1" value="Bike">
-					</label><br>
-				</div>
-			</li>
-			<hr style="width: 200px;">
-			<li class="filteritem"><button class="appdead filter_options">Application Deadline</button>
+			<li class="filteritem"><a onclick="openAppDeadline();" class="appdead filter_options">Sort By</a>
 				<div id="appdead" class="hide-section bar">
 
-					<label class="interestTypes" for="vehicle1">Upcoming Deadlines
-						<input class="boxes" type="checkbox" id="vehicle1" name="" value="Bike">
+					<label class="interestTypes" for="upcomingDeadlines">Upcoming Deadlines
+						<input class="boxes sortBy" onclick='selectSortBy(this);'type="checkbox" id="sortBy" name="upcomingDeadlines" value="upcomingDeadlines">
 					</label><br>
+					<label class="interestTypes" for="mostRecent">Most Recent
+						<input class="boxes sortBy" onclick='selectSortBy(this)'type="checkbox" id="sortBy" name="mostRecent" value="mostRecent">
+					</label><br>
+					<br>
+
 				</div>
 			</li>
 			<hr style="width: 200px;">
-			<li class="filteritem"><button class="college filter_options">College</button>
+			<!-- <li class="filteritem"><a onclick="openCollegeList();" class="college filter_options">College</a>
 				<div id="college" class="hide-section bar">
-					<input required list="schools" id="university" name="university" placeholder="College / University">
+					<input  list="schools" id="university" name="university" placeholder="College / University">
 					<datalist id="schools">
 
 						<option value="Educational Technical College-Recinto de Bayamon">
@@ -6882,11 +6906,19 @@
 						<option value="Zaytuna College">
 						<option value="ZMS The Academy">
 					</datalist>
+					<br>
+					
 				</div>
-			</li>
+				<br>
+				<br><br><br>
+					
+			</li> -->
+			<button onclick="saveFilters();"class="filterByButton"type="submit">Filter</button>
 		</ul>
-	
+	</form>
 </div>
+
+
 <!-- each of these collapse sections is a pop up window. may need to change
 	id in the future so that they're unique every time. -->
 <div id="projectInfo" class="popupposthidden">
@@ -6901,6 +6933,7 @@
 		<br>
 		<h1 id="description"style="font-size:15px;">Description </h1>
 	</div>
+	<button class="contactLeader">Contact Project Leader</button>
 </div>
 <div id="overlay2" class="hidden"></div>
 
@@ -6917,7 +6950,7 @@
 
 		<h1 class="popuptext">Project Title</h1>
 
-		<button class="close-button" onclick="close1();" type="button" name="button">&times;</button>
+		<button class="close-button" onclick="closeProjInfo();" type="button" name="button">&times;</button>
 		<!-- <input id="button" onclick="close();" class="close-button" type="submit" value="Close"> -->
 		<form action="{%url 'createposts'%}" method="post">
 			{% csrf_token %}
@@ -6942,9 +6975,27 @@
 			<h1 class="popuptext">Project Genres (Optional)</h1>
 			<h1 class="popuptext-note">This will help us find more suitable team members for your project</h1>
 			<input id="genres" class="popupinput" name="genres" placeholder="business, health, etc">
+			<select name="genreList" id="genreList">
+				<option selected="selected"disabled>Suggested Genres</option>
+				<option>Health</option>
+				<option>Business</option>
+				<option>Art</option>
+				<option>Software</option>
+				<option>Data Analytics</option>
+				<option>Web App Development</option>
+			</select>
+			<a class="addGenreButton"onclick="addGenre();">Add</a>
+			<hr class="">
+			<h1 class="popuptext">Questions for Appliers</h1>
+			<div id="q-div">
+				<div class="child">
+					<input id="qforapp" class="popupquestion" name="genres" placeholder="Ex: What skills can you bring to this project?">
+					<a class="addGenreButton" onclick="addQuestion();">Add</a>
+				</div>
+			</div>
+			
 	</div>
 	<input id="button" onclick="submit();" class="submit" type="submit">
-	</form>
 </div>
 <div id="overlay" class="hidden"></div>
 </div>

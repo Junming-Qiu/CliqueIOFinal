@@ -4,50 +4,61 @@
 {%block content%}
 {% if messages %}
 {% for message in messages %}
-<div style="position:relative;top:75px; z-index:99999;"
-  class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}" role="alert">{{ message }}</div>
+<div 
+style = "background-color: #1B9AAA; position:relative;top:55px; z-index:99999;" class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}" role="alert">{{ message }}</div>
 {% endfor %}
 {% endif %}
 {%if user.is_authenticated%}
 <link rel="stylesheet" href="{%static 'authorize_main/profile.css'%}">
-<div style="width: 300px;position: relative;left: 43%;top:250px;">
-  <form action="{%url 'edit_profile'%}" method='post'enctype="multipart/form-data">
+<div class = "wrap">
+  <form class = "editProf"action="{%url 'edit_profile'%}" method='post'enctype="multipart/form-data">
     {% csrf_token %}
     {%if user.profile_pic != 'None'%}
-    <h1 class = "namesd">HEY</h1>
-    <img style="height:100px;width: 100px;" class="profile_pic" src={{user.profile_pic.url}}
-      alt="Custom Profile Picture Unable to Load"><br><br>
-      <label for="img" style ="font-weight: bold;" >Select image:</label><br><br>
-      <input type="file" id="img" name="img" accept="image/*">
-      <br><br>
-      <label style = "color: orange;" for="display_profile">Display as Public Profile Picture</label>
-      {% if profile_pic == True %}
-        <input type="checkbox" name = "display_profile" value ="1" checked>
+    <div title = "Press to add photo" class="profileSec">
+      <label class = "pressImg" for="img"><img class="profile_pic" src={{user.profile_pic.url}}  alt="Custom Profile Picture Unable to Load"></label>
+     <br><br>
+      <label for="img" class="uploadPhoto">PHOTO</label>
+      <label class = "selectImg" for="img" ></label>
+      <input type="file" id="img" name="img" onchange = "selectImgName();" accept="image/*">
+      <label class="imgName" for="img">Add a photo to personalize your account</label>
+    <div class="checkdisplay">
+      <label class = "displayImg" for="img" for="display_profile">Display as Public Profile Picture {% if profile_pic == True %}
+        <input type="checkbox"  name = "display_profile" value ="1" checked>
       {%else%}
-        <input type="checkbox" name = "display_profile" value ="1">
-      {%endif%}
-      
+        <input type="checkbox"  name = "display_profile" value ="1">
+      {%endif%}</label>
+     
+    </div>  
+  </div>
     {%else%}
-    <img style="height:100px;width: 100px;" src="/media/media/default_profile.png" alt="Profile Picture Not Uploaded"><br><br>
-    <label for="display_img" style ="font-weight: bold;">Select image:</label><br><br>
-    <input type="file" id="img" name="display_img" accept="image/*">
+    <div title = "Press to add photo" class="profileSec">
+    <label class = "pressImg" for= "img"><img class="profile_pic" src="/media/media/default_profile.png" alt="Profile Picture Not Uploaded"></label> <br><br>
+    <label for="img" class="uploadPhoto">PHOTO</label>
+    <label class = "selectImg" for="img" ></label>
+    <input type="file" id="img" name="img" onchange = "selectImgName();"accept="image/*">
+    <label class="imgName" for="img">Add a photo to personalize your account</label>
+  </div>
     {% endif %}
-    
-    <br><br>
-    <h1 style ="font-weight: bold;"><b>Name: {{user.first_name}} {{user.last_name}}<b></h1><br>
-    
-    <h3 style ="font-weight: bold;">Email</h3><br>
-    <input type="text" value='{{user.email}}' name = 'email'>
-    <br><br>
-    <label style = "color: orange;" for="display_email">Display Email in Public Profile</label>
-    {% if email == True %}
+    <div class="nameSec">
+    <h1 class = "nameTag">NAME</h1>
+    <h1 class = "uname">{{user.first_name}} {{user.last_name}}</h1>
+  </div>
+    <div title = "Email: Press to edit" class="emailSec">
+    <h1 class="emailTag">EMAIL</h1>
+    <h3 class = "email"><input type="text" value='{{user.email}}' name = 'email' id = "emailBox"></h3>
+    <div class="checkDisplayEmail">
+    <label class = "displayEmail"for="display_email">Display Email in Public Profile  {% if email == True %}
       <input type="checkbox" name = "display_email" value ="1" checked>
     {%else%}
       <input type="checkbox" name = "display_email" value ="1">
-    {%endif%}
-    <br><br>
-    <h3 style ="font-weight: bold;">University</h3><br>
-    <input type="text" value='{{user.university}}' name="university"><br><br>
+    {%endif%}</label>
+  
+  </div>
+</div>
+  <div title = "University: Press to edit" class="universitySec">
+    <label class = "universityTag">UNIVERSITY</label>
+    <h3 class = "university"><input type="text" value='{{user.university}}' name="university" id="universityBox"></h3>
+  </div>
     <!-- <label style = "color: orange;" for="university">Display University in Public Profile</label> -->
     <!-- {% if university == True %}
       <input type="checkbox" name = "display_university" value ="1" checked>
@@ -55,8 +66,10 @@
       <input type="checkbox" name = "display_university" value ="1">
     {%endif%}  -->
     <!-- <br><br> -->
-    <h3 style ="font-weight: bold;">Major</h3><br>
-    <input type="text" value='{{user.major}}' name='major'><br><br>
+    <div title = "Major: Press to edit" class="majorSec">
+      <label class ="majorTag">MAJOR</label>
+    <h3 class = "major"><input type="text" value='{{user.major}}' name='major' id="majorBox"></h3>
+  </div>
     <!-- <label style = "color: orange;" for="major">Display Major in Public Profile</label>
     {%if major%}
       <input type="checkbox" name = "display_major" value ="1" checked>
@@ -64,7 +77,8 @@
      <input type="checkbox" name = "display_major" value ="1">
     {%endif%} -->
     <!-- <br><br> -->
-    <label style ="font-weight: bold;" for="school_year">School Year: </label>
+    <div class="schoolYear">
+    <label  for="school_year" class = "schoolYearTag">SCHOOL YEAR</label>
     {%if user.school_year == '1'%}
     <select name="school_year">
       <option value="1" selected>Freshman</option>
@@ -94,6 +108,8 @@
       <option value="4" selected>Senior</option>
     </select>
     {%endif%}
+  
+  </div>
     <!-- <br><br> -->
     <!-- <label style = "color: orange;" for="school_year">Display School Year in Public Profile</label>
     
@@ -102,78 +118,39 @@
     {%else%}
       <input type="checkbox" name = "display_school_year" value ="1">
     {%endif%} -->
-    <br><br><button type="submit">Make Changes</button>
+  
+  
+  <div title = "Press to edit biography" class="BioSec">
+    <label for = "bio" class ="BioTag">BIOGRAPHY</label>
+    <h3 class = "biography"><textarea style ="overflow: auto;" name="bio" id="bio">{{user.bio}}</textarea></h3>
+  </div>
+  
+  <button class = "makeChange" type="submit">Make Changes</button>
   </form>
+  
+</div>
+<div class="profilefriendsList">
+  <h1 style="text-align:center;margin-top:20px;color:white;font-weight:bold;">Colleagues List</h1>
+  <br>
+  <input type="text" placeholder="Search By Name">
+  <a href="#"><i id="fa-search"class="fa fa-search" aria-hidden="true"></i></a>
+  <div class="profilefriendsBox">
+    {%for friend in friend_list %}
+    <br>
+    <div class="profilefriendsButton">
+      <a href ='/posts/applicant_profile/{{friend.id}}'>
+        <img style='width:100px;' src="{{ friend.profile_pic.url }}"/>
+        <h1>{{friend.first_name}} {{friends.last_name}}</h1>
+        <h1>{{friend.id}}</h1>
+      </a>
+      
+    </div>
+    {%endfor%}
+
+</div>
 </div>
 
-
-<!-- <h1>Bio</h1>
-
-      <div class="flip-card">
-        <div class="flip-card-inner">
-          <div class="flip-card-front">
-            <img src="https://image.flaticon.com/icons/svg/1159/1159633.svg" alt="">
-          </div>
-          <div class="flip-card-back">
-            <button id="bb" class="bb">Add Bio</button>
-          </div>
-        </div>
-
-      </div>
-
-      <div id="bio-wrapper" class="hidetextbox">
-        <button id="exit" style="float: right;">X</button>
-      <textarea class="textbox" name="bio" id="bio" cols="30" rows="10"></textarea>
-      <button id="submit">Submit</button>
-      </div>
-      <div id="actualbio">
-
-      </div>
-    </div> -->
-
-
-    <script>
-      var biobutton = document.querySelector("#bb");
-      
-      var textbox = document.querySelector("#bio");
-
-      biobutton.addEventListener('click', function(){
-        document.querySelector("#bio-wrapper").classList.add("showtextbox");
-      })
-
-      var exitbutton = document.querySelector("#exit");
-      exitbutton.addEventListener("click", function(){
-        document.querySelector("#bio-wrapper").classList.remove("showtextbox");
-        document.querySelector("#bio-wrapper").classList.add("hidetextbox");
-      })
-
-      var submitbutton = document.querySelector("#submit");
-      submitbutton.addEventListener('click', function(){
-        if (textbox.value == "")
-        {
-          biobutton.innerHTML = "Add Bio";
-          alert("There is no input!")
-        }
-        else 
-        {
-          biobutton.innerHTML = "Edit Bio";
-          var alltext = textbox.value;
-          document.querySelector("#bio-wrapper").classList.remove("showtextbox");
-          document.querySelector("#bio-wrapper").classList.add("hidetextbox");
-          console.log(alltext);
-          document.querySelector("#actualbio").innerHTML = "<p style='color:blue;font-size:38px;'>"+alltext+ "</p>";
-
-
-        }
-      })
-      console.log(biobutton);
-
-      var pfp = document.querySelector("#pfp");
-      pfp.addEventListener('click', function(){
-        document.querySelector(".popup").classList.remove("hide");
-        document.querySelector(".popup").classList.add("show");
-      })
-    </script>
+<script type="text/javascript"src="{% static 'posts_app/js/extra.js' %}"></script>
 
 {%endif%}
 {%endblock%}

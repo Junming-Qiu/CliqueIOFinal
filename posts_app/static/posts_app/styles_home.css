@@ -255,6 +255,7 @@ Primary style
     /* overflow: scroll; */
     width: 100%;
   }
+
   .cd-gallery li {
     margin-bottom: 1.6em;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
@@ -392,7 +393,7 @@ Primary style
   }
   .popuptext-note{
     font-size:14px;
-    color:white;
+    color:#1B9AAA;
     margin-bottom:10px;
   }
   .popupinput{
