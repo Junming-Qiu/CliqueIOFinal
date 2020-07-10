@@ -17,6 +17,33 @@
 .filter a:hover{
   cursor:pointer;
 }
+
+.appResponses::-webkit-scrollbar {
+  /* overflow:hidden!important; */
+  /* background-color: royalblue!important; */
+  display: none;
+  /* overflow-y:none; */
+}
+.appResponses{
+  overflow:scroll;
+  margin:0 auto;
+  padding:10px;
+  width:90%;
+  height:100px;
+  border-radius:10px;
+  border:1px solid #1B9AAA;
+  background-color:white;
+  
+}
+.appResponses h1{
+  color:black;
+}
+.appQuestion{
+  padding-left:30px;
+  margin: 20px auto ;
+  font-size:25px;
+  color:#1B9AAA!important;
+}
 .addGenreButton{
   padding: 5px 20px;
   margin-left:5px;
@@ -25,6 +52,53 @@
   text-align: center;
   
 }
+.postApplication .submit{
+  display:block;
+  margin:0 auto;
+  padding:10px;
+  font-size:15px;
+}
+.postApplication .submit:hover{
+  color:#EF476F;
+  background:White;
+}
+.postApplication h1{
+  text-align:center;
+  font-weight:bold;
+  font-size:20px;
+  color:#EF476F;
+}
+.postApplication{
+  padding:10px;
+  margin:0 auto;
+  width:60%;
+  min-width:600px;
+  max-width:1200px;
+  background:#1B9AAA;
+  border-radius:10px;
+  max-height:90%;
+  overflow:scroll;
+  overflow-x:hidden;
+}
+
+.question {
+  color:white;
+font-weight:bold;
+  display:block;
+  margin:30px auto 10px;
+  width:90%;
+  
+}
+.text-box{
+  border-radius:10px;
+  display:block;
+  margin:0 auto;
+  width:90%;
+  resize:none;
+  padding:10px;
+  height:200px;
+}
+
 #addGenreButton{
   color:#F8FFE5;
   background-color: #1B9AAA;
@@ -118,16 +192,8 @@
     border-bottom: 0px;
 }
 
-.text-box {
-  width: 75%;
-  margin-left: 10%;
-  resize: none;
-  padding:10px;
-}
-.question {
-  width: 100%;
-  padding: 5%;
-}
+
+
 
 .bottom-space {
   text-align: center;
@@ -236,6 +302,7 @@ body .gallery .BookMarkButt {
   max-height: 175px;
   overflow: scroll;
   overflow-x: hidden;
+  
 }
 .applicantList {
   border-radius: 10px;
@@ -250,6 +317,7 @@ body .gallery .BookMarkButt {
   height: 70vh;
   color: white;
   background: rgba(0, 0, 0, 0.3);
+  
 }
 .acceptApplicants {
   position: absolute;
@@ -257,6 +325,7 @@ body .gallery .BookMarkButt {
   margin-left: 35%;
   color: white;
   background: #1b9aaa;
+  margin-top:-5%;
   border-radius: 10px;
   outline: none;
   border: none;
@@ -269,41 +338,56 @@ body .gallery .BookMarkButt {
 }
 
 .viewApp {
-  position: absolute;
-  margin-left: 30%;
-  margin-top: 40px;
+  position: relative;
+  margin-left: 60%;
+  margin-top: 0px;
+  bottom:16px;
   color: white;
-  background: #1b9aaa;
-  border-radius: 10px;
+  background: none;
   outline: none;
   border: none;
   height: 50px;
   width: 100px;
+  z-index:0;
 }
 
-.viewApp:hover {
-  background: white;
-  color: #1b9aaa;
+#viewApp:hover {
+  cursor:pointer;
+  text-decoration:underline;
+  color:#1b9aaa;
 }
 
 .viewAppHide {
   visibility: hidden;
   height: 0;
   width: 0;
+  
 }
-
+.fa-comment-dots{
+  color:white;
+}
+.chatButton{
+  position:relative;
+  bottom:10px;
+  color:white;
+}
+#chatButton:hover{
+  color:#1b9aaa;
+}
 .viewAppShow{
-  visibility: visible;
+  
+  
   /* position: relative; */
   display: block;
   /* border: solid black;
   height: 400px;
   width: 600px; */
-  z-index: 99999999999999999999999;
+  
   visibility: visible;
   overflow: auto;
   overflow-x:hidden;
   position: fixed;
+  z-index:5;
   background:#f8ffE5 ;
   /* padding-left: 1% ; */
   /* padding-bottom: 20px; */
@@ -318,12 +402,11 @@ body .gallery .BookMarkButt {
 
 .appHeading {
   font-family: 'Inter', sans-serif; 
-  font-size:40px;
-  padding-left: 10px; 
-  padding-top: 10px; 
-  padding-bottom: 10px;
+  font-size:30px;
+  padding:10px;
+  text-align: center;
   background-color: #06D6A0; 
-  color: white;
+  color: white!important;
 }
 
 .listNames {

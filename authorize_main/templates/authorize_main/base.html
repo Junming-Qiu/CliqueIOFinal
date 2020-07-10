@@ -1,11 +1,18 @@
 {%load static%}
+{%load tz%}
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- line below is new -->
-    
+    <!-- <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
+    /> -->
+    <script src='https://kit.fontawesome.com/a076d05399.js'></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="icon" href="{% static 'authorize_main/favicon (1).ico' %}" sizes="10x10">
     <link
       rel="stylesheet"
       href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
@@ -32,10 +39,7 @@
       href="{%static 'authorize_main/landing_page_styles.css'%}"
     />
     <link rel="stylesheet" href="{%static 'authorize_main/base.css'%}" />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
-    />
+    
     
     <script
       type="text/javascript"
@@ -67,14 +71,14 @@
       <input style="display: none;" name="savePage" id="savePage" type="text" />
 
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <ul class="navbar-nav ml-auto">
+        <ul class="navbar-nav ml-auto" >
           {%if user.is_authenticated%}
 
           <!-- {% comment %} <li class = "nav-item"><a class="nav-link"href="{%url 'see_favorite'%}"style = "color:white;">Favorites</a></li> {% endcomment %}
         {% comment %} <li class = "nav-item"><a class="nav-link"href="{% url 'see_my_posts' %}"style = "color:white;">My Posts</a></li>{%endcomment%}-->
           <!-- <li class = "nav-item"><a class="nav-link"href="{% url 'createposts'%}"style = "color:white;">Post an Idea</a></li> -->
           <!-- {% comment %} <li class = "nav-item"><a class="nav-link"href="{%url 'see_all_posts'%}"style = "color:white;">All Posts</a></li> {% endcomment %}-->
-          <li class="nav-item">
+          <!-- <li class="nav-item">
             <a
               onclick="hideNotifications();"
               class="nav-link"
@@ -90,8 +94,8 @@
               onclick="hideNotifications();"
               style="margin-right: 50px; color: white; font-size: 25px;"
               ><i class="fa fa-users" title="Friends"></i></a>
-          </li>
-          <li class="nav-item">
+          </li> -->
+          <li class="nav-item" style="height:50%;">
             <a
               class="nav-link"
               href=""
@@ -207,7 +211,7 @@
                   left:140px;
                 "
               >
-                {{notification.date_created}}
+              {{notification.date_created|timezone:'America/New_York'}}
               </h1>
               
             </div>
@@ -248,7 +252,7 @@
                   left:140px;
                 "
               >
-                {{notification.date_created}}
+                {{notification.date_created|timezone:'America/New_York'}}
               </h1>         
             </div>
           </a>
@@ -276,6 +280,7 @@
     </div> -->
     <input style="display: none;" name="savePage" id="savePage" type="text" />
     <script>
+     
       console.log(document.getElementById("savePage").value);
       if (document.cookie.indexOf("notificationClicked=on") != -1) {
         showNotifications(event);

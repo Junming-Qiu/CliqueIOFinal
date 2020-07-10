@@ -18,13 +18,13 @@
 </div>
 <!-- List of ALL projects BACKEND: just need to set the arguments inside openProject(name,skills,location,description)
 		Make sure to set the h1's under it as well. -->
-		<script>function openProject(projectName,memberCount,skills,location,description){
+		<script>function openProject(projectName,memberCount,skills,description,postID){
 			var element=document.getElementById("projectInfo");
 			var projects=document.querySelectorAll('.projects');
 			document.getElementById("projectName").innerHTML=projectName;
 			document.getElementById("memberCount").innerHTML="Number of Team Members: "+memberCount;
 			document.getElementById("skills").innerHTML="Skills preferred: "+skills;
-			document.getElementById("location2").innerHTML="Location: "+location;
+			
 			document.getElementById("description").innerHTML="Description: "+description;
 			element.classList.add("popuppostshown");
 			element.classList.remove("popupposthidden");
@@ -33,6 +33,7 @@
 			element2.classList.remove("hidden");
 			element2.classList.add("show1");
 			element2.style.display="block";
+			document.getElementById('contactLeaderID').value=postID;
 		  }
 		  </script>
 
@@ -40,7 +41,8 @@
 <div class="gallery applied">
 	{%for application, url in applied_posts_urls%}
 	<div class = "projectSec" id="clickPost"
-			onclick="openProject('{{application.applied_post.title_of_post}}','{{application.applied_post.num_of_positions}}','{{application.applied_post.skills_needed}}','lolol','{{application.applied_post.description_of_post}}');">
+			onclick="openProject('{{application.applied_post.title_of_post}}','{{application.applied_post.num_of_positions}}','{{application.applied_post.skills_needed}}',
+			'{{application.applied_post.description_of_post}}','{{application.applied_post.id}}');">
 			<div id="project"  class="project">
 				{%if application.applied_post.post_made_by.profile_pic == 'None'%}
 				<img class="projectProfImage" src = '/media/media/default_profile.png' alt = "">
@@ -105,7 +107,7 @@
 		{% csrf_token%}
 		<input type="search" id='search' name="search" class="searchBar" placeholder="Search By Keyword">
 		<!--<button type ="submit">Submit</button>-->
-		<button onclick="saveFilters();"style="background:transparent;border:none;"action='submit'><i id="fa-search"class="fa fa-search" aria-hidden="true"></i></button>
+		<button onclick="saveFilters();"style="margin-left:30px;background:transparent;border:none;"action='submit'><i id="fa-search"class="fa fa-search" aria-hidden="true"></i></button>
 		<br>
 		<br>
 		<a id="clear" onclick="clearAll();" href="javascript:;" class="hvr-underline-reveal">Clear All</a>
@@ -6929,11 +6931,14 @@
 		<br>
 		<h1 id="skills"style="font-size:15px;">Skills</h1>
 		<br>
-		<h1 id="location2"style="font-size:15px;">Location</h1>
-		<br>
 		<h1 id="description"style="font-size:15px;">Description </h1>
 	</div>
-	<button class="contactLeader">Contact Project Leader</button>
+	
+	<form action="{% url 'contact_leader' %}" method='post'>
+		{% csrf_token %}
+		<input style="display:none;" type="text" name="contactLeaderID" id="contactLeaderID">
+		<button type='submit' class="contactLeader">Contact Project Leader</button>
+	</form>
 </div>
 <div id="overlay2" class="hidden"></div>
 
@@ -6941,62 +6946,62 @@
 
 
 
-<input id="button" onclick="myFunction();" class="plus" type="image" style="position:fixed;bottom:5%;left:95%;"
+<input id="button" onclick="myFunction();" class="plus" type="image" 
 	name="addpost" src="{%static 'posts_app/plus_icon.png'%}">
-<div id="show" class="popupposthidden">
-	<h1 style="left:29%;font-size:30px;margin-bottom:2%;">CREATE NEW PROJECT</h1>
-
-	<div class="projects">
-
-		<h1 class="popuptext">Project Title</h1>
-
-		<button class="close-button" onclick="closeProjInfo();" type="button" name="button">&times;</button>
-		<!-- <input id="button" onclick="close();" class="close-button" type="submit" value="Close"> -->
-		<form action="{%url 'createposts'%}" method="post">
-			{% csrf_token %}
-			<input id="title" class="popupinput" name="title_of_post">
-			<hr class="divide">
-			<h1 class="popuptext">Description</h1>
-			<textarea id="description" maxlength="500"class="popupinput" name="description_of_post" rows="8" cols="80"></textarea>
-			<hr class="divide">
-			<h1 class="popuptext">Skills</h1>
-			<input id="skills" class="popupinput" name="skills_needed" type="text">
-			<hr class="divide">
-			{% comment %} <h1 class="popuptext">Location</h1>
-			<input id="location" class="popupinput" name="">
-			<hr class="divide"> {% endcomment %}
-			<h1 class="popuptext">Number of Team Members</h1>
-			<input id="team" class="popupinput" name="num_of_positions" input type="number">
-			<hr class="divide">
-			<h1 class="popuptext">Application Deadline</h1>
-			<input id="appdeadline" class="popupinput" type="date" name='application_deadline'>
-			<!-- if date is invalid: display an error -->
-			<hr class="divide">
-			<h1 class="popuptext">Project Genres (Optional)</h1>
-			<h1 class="popuptext-note">This will help us find more suitable team members for your project</h1>
-			<input id="genres" class="popupinput" name="genres" placeholder="business, health, etc">
-			<select name="genreList" id="genreList">
-				<option selected="selected"disabled>Suggested Genres</option>
-				<option>Health</option>
-				<option>Business</option>
-				<option>Art</option>
-				<option>Software</option>
-				<option>Data Analytics</option>
-				<option>Web App Development</option>
-			</select>
-			<a class="addGenreButton"onclick="addGenre();">Add</a>
-			<hr class="">
-			<h1 class="popuptext">Questions for Appliers</h1>
-			<div id="q-div">
-				<div class="child">
-					<input id="qforapp" class="popupquestion" name="genres" placeholder="Ex: What skills can you bring to this project?">
-					<a class="addGenreButton" onclick="addQuestion();">Add</a>
+	<div id="show" class="popupposthidden">
+		<h1 style="left:29%;font-size:30px;margin-bottom:2%;">CREATE NEW PROJECT</h1>
+	
+		<div  class="projects">
+	
+			<h1 class="popuptext">Project Title</h1>
+	
+			<button class="close-button" onclick="closeProjInfo();" type="button" name="button">&times;</button>
+			<!-- <input id="button" onclick="close();" class="close-button" type="submit" value="Close"> -->
+			<form action="{%url 'createposts'%}" method="post">
+				{% csrf_token %}
+				<input id="title" class="popupinput" name="title_of_post">
+				<hr class="divide">
+				<h1 class="popuptext">Description</h1>
+				<textarea id="description" maxlength="500"class="popupinput" name="description_of_post" rows="8" cols="80"></textarea>
+				<hr class="divide">
+				<h1 class="popuptext">Skills</h1>
+				<input id="skills" class="popupinput" name="skills_needed" type="text">
+				<hr class="divide">
+				{% comment %} 
+				<hr class="divide"> {% endcomment %}
+				<h1 class="popuptext">Number of Team Members</h1>
+				<input id="team" class="popupinput" name="num_of_positions" input type="number">
+				<hr class="divide">
+				<h1 class="popuptext">Application Deadline</h1>
+				<input id="appdeadline" class="popupinput" type="date" name='application_deadline'>
+				<!-- if date is invalid: display an error -->
+				<hr class="divide">
+				<h1 class="popuptext">Project Genres (Optional)</h1>
+				<h1 class="popuptext-note">This will help us find more suitable team members for your project. Separate with commas!</h1>
+				<input id="genres" class="popupinput" name="genres" placeholder="business, health, etc">
+				<select name="genreList" id="genreList">
+					<option selected="selected"disabled>Suggested Genres</option>
+					<option>Health</option>
+					<option>Business</option>
+					<option>Art</option>
+					<option>Software</option>
+					<option>Data Analytics</option>
+					<option>Web App Development</option>
+				</select>
+				<a id="addGenreButton"class="addGenreButton"onclick="addGenre();">Add</a>
+				<hr class="">
+				<h1 class="popuptext">Questions for Applicants</h1>
+				<div id="q-div">
+					<div class="child">
+						<input id="qforapp" class="popupinput" name="questions" placeholder="Ex: What skills can you bring to this project?">
+						<a id="addGenreButton"class="addGenreButton" onclick="addQuestion();">Add</a>
+					</div>
 				</div>
-			</div>
-			
+				
+		</div>
+		<input id="button" onclick="submit();" class="submit" type="submit">
+		</form>
 	</div>
-	<input id="button" onclick="submit();" class="submit" type="submit">
-</div>
 <div id="overlay" class="hidden"></div>
 </div>
 <!-- skills, location/meeting link,
